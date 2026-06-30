@@ -32,7 +32,6 @@
             padding: 2.5rem 2rem;
             box-shadow: 0 20px 50px rgba(0, 10, 30, 0.7);
             border: 1px solid rgba(0, 180, 255, 0.08);
-            transition: opacity 0.25s ease;
         }
 
         .header {
@@ -80,7 +79,6 @@
             align-items: center;
             gap: 0.6rem;
             font-size: 0.95rem;
-            transition: transform 0.15s ease, background 0.2s;
         }
 
         .stat-card strong {
@@ -182,17 +180,6 @@
             transform: scale(0.97);
         }
 
-        .btn-danger {
-            background: #3b1a24;
-            border-color: #8f3a4a;
-            color: #ffc8d0;
-        }
-
-        .btn-danger:hover {
-            background: #692a3a;
-            border-color: #d45a6e;
-        }
-
         .btn-outline {
             background: transparent;
             border-color: #2f4a6a;
@@ -221,7 +208,7 @@
 
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
             gap: 1.5rem;
             margin-top: 1.8rem;
         }
@@ -252,15 +239,27 @@
             word-break: break-all;
         }
 
-        .card .cname {
-            color: #9bb8d9;
-            font-size: 0.85rem;
-            word-break: break-all;
-            opacity: 0.8;
+        .card .sub span {
+            font-weight: 300;
+            color: #4f7ea0;
+            font-size: 0.8rem;
+        }
+
+        .card .cname-box {
             background: #0a1420;
-            padding: 0.3rem 0.8rem;
+            padding: 0.5rem 0.8rem;
             border-radius: 12px;
             font-family: monospace;
+            font-size: 0.85rem;
+            color: #9bb8d9;
+            word-break: break-all;
+            border: 1px solid #1a2a40;
+        }
+
+        .card .cname-box .label {
+            color: #5e7d9e;
+            font-size: 0.7rem;
+            font-family: system-ui;
         }
 
         .card .meta {
@@ -349,7 +348,7 @@
             display: flex;
             flex-direction: column;
             gap: 0.6rem;
-            max-width: 420px;
+            max-width: 450px;
             width: 100%;
             pointer-events: none;
         }
@@ -359,7 +358,7 @@
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border: 1px solid #2a527a;
-            padding: 0.9rem 1.4rem;
+            padding: 1rem 1.4rem;
             border-radius: 40px;
             box-shadow: 0 14px 35px rgba(0,0,0,0.6);
             color: #e0edff;
@@ -369,8 +368,8 @@
             transition: transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.1), opacity 0.2s ease;
             pointer-events: all;
             display: flex;
-            align-items: center;
-            gap: 0.7rem;
+            flex-direction: column;
+            gap: 0.3rem;
         }
 
         .toast.show {
@@ -387,7 +386,13 @@
             border-color: #2d8f6a;
         }
 
-        .toast .close-toast {
+        .toast .toast-header {
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+        }
+
+        .toast .toast-header .close-toast {
             margin-left: auto;
             background: none;
             border: none;
@@ -400,10 +405,11 @@
             font-size: 0.75rem;
             color: #8aaacf;
             background: #0a1420;
-            padding: 0.3rem 0.8rem;
+            padding: 0.4rem 0.8rem;
             border-radius: 12px;
             font-family: monospace;
-            margin-top: 0.3rem;
+            margin-top: 0.2rem;
+            border: 1px solid #1a2a40;
         }
 
         .empty {
@@ -464,7 +470,7 @@
             color: #8aaacf;
         }
 
-        .modal input, .modal select {
+        .modal input {
             width: 100%;
             padding: 0.75rem 1rem;
             border-radius: 60px;
@@ -475,7 +481,7 @@
             outline: none;
         }
 
-        .modal input:focus, .modal select:focus {
+        .modal input:focus {
             border-color: #3a81d4;
         }
 
@@ -483,6 +489,16 @@
             font-size: 0.7rem;
             color: #4f789e;
             margin-top: 0.3rem;
+        }
+
+        .modal .example {
+            font-size: 0.7rem;
+            color: #3a6a8a;
+            margin-top: 0.2rem;
+            background: #0a1420;
+            padding: 0.3rem 0.8rem;
+            border-radius: 12px;
+            font-family: monospace;
         }
 
         .modal .modal-actions {
@@ -523,15 +539,14 @@
             </div>
             <div class="stats">
                 <div class="stat-card"><span>📦 Total</span> <strong class="num" id="totalCount">0</strong></div>
-                <div class="stat-card"><span>✅ Active</span> <strong class="num" id="activeCount">0</strong></div>
+                <div class="stat-card"><span>✅ Verified</span> <strong class="num" id="verifiedCount">0</strong></div>
                 <div class="stat-card"><span>🟢 DB</span> <span id="dbStatus">●</span></div>
-                <div class="stat-card"><span>🔴 Render</span> <span id="renderStatus">●</span></div>
             </div>
         </div>
 
         <div class="actions">
             <div class="search-wrap">
-                <input type="text" id="searchInput" placeholder="Search subdomain or URL..." />
+                <input type="text" id="searchInput" placeholder="Search subdomain or CNAME..." />
             </div>
             <button class="btn btn-primary" id="createBtn">＋ Create</button>
             <button class="btn btn-outline" id="refreshBtn">⟳ Refresh</button>
@@ -544,13 +559,16 @@
     <div class="modal-overlay" id="modalOverlay">
         <div class="modal">
             <h2>✨ New Subdomain</h2>
+            
             <label>Subdomain</label>
             <input type="text" id="modalSub" placeholder="mywebsite" maxlength="63" />
-            <div class="hint">.cutehub.top (letters, numbers, hyphens only)</div>
+            <div class="hint">Only letters, numbers, and hyphens · Max 63 characters</div>
+            <div class="example">→ mywebsite.cutehub.top</div>
             
-            <label>CNAME Target (from Render)</label>
+            <label>CNAME Target</label>
             <input type="text" id="modalCname" placeholder="cname.vercel-dns.com" />
-            <div class="hint">The target value from Render Custom Domain</div>
+            <div class="hint">The target value from Render/Cloudflare/Any DNS provider</div>
+            <div class="example">→ cname.vercel-dns.com</div>
             
             <div class="modal-actions">
                 <button class="btn btn-outline" id="modalCancel">Cancel</button>
@@ -568,9 +586,8 @@
             const grid = document.getElementById('mappingsGrid');
             const emptyState = document.getElementById('emptyState');
             const totalSpan = document.getElementById('totalCount');
-            const activeSpan = document.getElementById('activeCount');
+            const verifiedSpan = document.getElementById('verifiedCount');
             const dbStatus = document.getElementById('dbStatus');
-            const renderStatus = document.getElementById('renderStatus');
             const searchInput = document.getElementById('searchInput');
 
             const createBtn = document.getElementById('createBtn');
@@ -589,11 +606,15 @@
             function showToast(message, type = 'success', extra = null) {
                 const toast = document.createElement('div');
                 toast.className = `toast ${type}`;
-                let content = `<span>${message}</span>`;
+                let content = `
+                    <div class="toast-header">
+                        <span>${message}</span>
+                        <button class="close-toast">✕</button>
+                    </div>
+                `;
                 if (extra) {
                     content += `<div class="dns-info">${extra}</div>`;
                 }
-                content += `<button class="close-toast">✕</button>`;
                 toast.innerHTML = content;
                 toastContainer.appendChild(toast);
                 requestAnimationFrame(() => toast.classList.add('show'));
@@ -624,7 +645,6 @@
                 if (q) {
                     filtered = mappings.filter(m => 
                         m.subdomain.toLowerCase().includes(q) || 
-                        (m.targetUrl && m.targetUrl.toLowerCase().includes(q)) ||
                         (m.cnameTarget && m.cnameTarget.toLowerCase().includes(q))
                     );
                 }
@@ -636,18 +656,22 @@
                     emptyState.style.display = 'none';
                     grid.innerHTML = filtered.map(m => {
                         const statusClass = m.status || 'pending';
+                        const statusLabel = statusClass.charAt(0).toUpperCase() + statusClass.slice(1);
                         return `
                         <div class="card" data-id="${m._id}">
-                            <div class="sub">${escapeHtml(m.subdomain)}<span style="font-weight:300;color:#4f7ea0;font-size:0.8rem;">.cutehub.top</span></div>
-                            <div class="cname">➜ ${escapeHtml(m.cnameTarget)}</div>
+                            <div class="sub">${escapeHtml(m.subdomain)}<span>.cutehub.top</span></div>
+                            <div class="cname-box">
+                                <div class="label">CNAME →</div>
+                                ${escapeHtml(m.cnameTarget)}
+                            </div>
                             <div class="meta">
                                 <span>🕒 ${formatDate(m.createdAt)}</span>
-                                <span class="status-badge ${statusClass}">● ${statusClass}</span>
+                                <span class="status-badge ${statusClass}">● ${statusLabel}</span>
                             </div>
                             <div class="actions-card">
-                                <button class="btn-sm" data-action="copy" data-sub="${m.subdomain}">📋 Copy</button>
-                                <button class="btn-sm" data-action="copy-cname" data-cname="${m.cnameTarget}">📋 CNAME</button>
-                                ${statusClass !== 'verified' ? `<button class="btn-sm success" data-action="verify" data-id="${m._id}">🔄 Verify</button>` : ''}
+                                <button class="btn-sm" data-action="copy-domain" data-sub="${m.subdomain}">📋 Copy Domain</button>
+                                <button class="btn-sm" data-action="copy-cname" data-cname="${m.cnameTarget}">📋 Copy CNAME</button>
+                                <button class="btn-sm" data-action="mark-verified" data-id="${m._id}">✅ Mark Verified</button>
                                 <button class="btn-sm danger" data-action="delete" data-id="${m._id}">✕ Delete</button>
                             </div>
                         </div>
@@ -655,7 +679,7 @@
                 }
 
                 totalSpan.textContent = mappings.length;
-                activeSpan.textContent = mappings.filter(m => m.status === 'verified').length;
+                verifiedSpan.textContent = mappings.filter(m => m.status === 'verified').length;
             }
 
             async function fetchList() {
@@ -681,8 +705,6 @@
                         const data = await res.json();
                         dbStatus.textContent = data.database === 'connected' ? '●' : '⚠';
                         dbStatus.style.color = data.database === 'connected' ? '#5fdb9a' : '#e68a8a';
-                        renderStatus.textContent = data.render === 'configured' ? '●' : '⚠';
-                        renderStatus.style.color = data.render === 'configured' ? '#5fdb9a' : '#e68a8a';
                     }
                 } catch {
                     dbStatus.textContent = '⚠';
@@ -703,15 +725,19 @@
                 }
             }
 
-            async function verifyMapping(id) {
+            async function markVerified(id) {
                 try {
-                    const res = await fetch(`/verify/${id}`, { method: 'POST' });
+                    const res = await fetch(`/update-status/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: 'verified' })
+                    });
                     const json = await res.json();
-                    if (!res.ok) throw new Error(json.message || 'Verification failed');
-                    showToast(json.message, json.success ? 'success' : 'error');
+                    if (!res.ok) throw new Error(json.message || 'Update failed');
+                    showToast('✅ Marked as verified', 'success');
                     await fetchList();
                 } catch (e) {
-                    showToast(e.message || 'Verification error', 'error');
+                    showToast(e.message || 'Update error', 'error');
                 }
             }
 
@@ -762,10 +788,10 @@
                 if (!btn) return;
                 const action = btn.dataset.action;
 
-                if (action === 'copy') {
+                if (action === 'copy-domain') {
                     const sub = btn.dataset.sub;
                     navigator.clipboard?.writeText(`${sub}.cutehub.top`).then(() => {
-                        showToast('📋 Copied!', 'success');
+                        showToast('📋 Domain copied!', 'success');
                     }).catch(() => showToast('Copy failed', 'error'));
                 }
 
@@ -776,9 +802,9 @@
                     }).catch(() => showToast('Copy failed', 'error'));
                 }
 
-                if (action === 'verify') {
+                if (action === 'mark-verified') {
                     const id = btn.dataset.id;
-                    verifyMapping(id);
+                    markVerified(id);
                 }
 
                 if (action === 'delete') {
@@ -802,7 +828,7 @@
                     return;
                 }
                 if (!/^[a-zA-Z0-9-]+$/.test(sub)) {
-                    showToast('Only letters, numbers, hyphen', 'error');
+                    showToast('Only letters, numbers, hyphen allowed', 'error');
                     return;
                 }
                 if (sub.length > 63) {
