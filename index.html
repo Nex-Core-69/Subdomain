@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5">
+    <title>Subdomain Manager · cutehub.top</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background: #0b0d15;
+            color: #eef2f6;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1.5rem;
+        }
+
+        .dashboard {
+            max-width: 1400px;
+            width: 100%;
+            background: rgba(18, 22, 33, 0.75);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border-radius: 2.5rem;
+            padding: 2.5rem 2rem;
+            box-shadow: 0 20px 50px rgba(0, 10, 30, 0.7);
+            border: 1px solid rgba(0, 180, 255, 0.08);
+            transition: opacity 0.25s ease;
+        }
+
+        .header {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2.5rem;
+            gap: 1.2rem;
+        }
+
+        .logo h1 {
+            font-size: 1.9rem;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #c0e0ff, #66c0ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo span {
+            font-weight: 300;
+            color: #8aa4c0;
+            font-size: 1rem;
+            margin-left: 0.5rem;
+            -webkit-text-fill-color: #8aa4c0;
+        }
+
+        .stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.2rem;
+        }
+
+        .stat-card {
+            background: rgba(0, 20, 40, 0.6);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            padding: 0.6rem 1.4rem;
+            border-radius: 60px;
+            border: 1px solid rgba(0, 180, 255, 0.15);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.95rem;
+            transition: transform 0.15s ease, background 0.2s;
+        }
+
+        .stat-card strong {
+            color: #7fc9ff;
+            font-weight: 500;
+        }
+
+        .stat-card .num {
+            background: #0a1a2a;
+            padding: 0.1rem 0.8rem;
+            border-radius: 30px;
+            font-weight: 600;
+            color: #b0dbff;
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.9rem;
+            align-items: center;
+            margin-bottom: 2.2rem;
+        }
+
+        .search-wrap {
+            flex: 2;
+            min-width: 200px;
+            position: relative;
+        }
+
+        .search-wrap input {
+            width: 100%;
+            padding: 0.75rem 1.2rem;
+            border-radius: 60px;
+            border: 1px solid #1f2a3f;
+            background: #101826;
+            color: #eef2f6;
+            font-size: 0.95rem;
+            outline: none;
+            transition: 0.2s;
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.4);
+        }
+
+        .search-wrap input:focus {
+            border-color: #2f7fff;
+            background: #0c1628;
+        }
+
+        .btn {
+            padding: 0.7rem 1.8rem;
+            border-radius: 60px;
+            font-weight: 500;
+            background: #0f2844;
+            color: #d6eaff;
+            border: 1px solid #254a70;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.95rem;
+            letter-spacing: 0.2px;
+            backdrop-filter: blur(2px);
+            -webkit-backdrop-filter: blur(2px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at center, rgba(255,255,255,0.2) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+
+        .btn:active::after {
+            opacity: 1;
+            transition: 0s;
+        }
+
+        .btn-primary {
+            background: #0a3d6b;
+            border-color: #3c8eff;
+            color: white;
+            box-shadow: 0 4px 14px rgba(0, 80, 200, 0.2);
+        }
+
+        .btn-primary:hover {
+            background: #1a5a9e;
+            border-color: #6aaaff;
+            transform: scale(1.02);
+            box-shadow: 0 8px 20px rgba(0, 100, 255, 0.25);
+        }
+
+        .btn-primary:active {
+            transform: scale(0.97);
+        }
+
+        .btn-danger {
+            background: #3b1a24;
+            border-color: #8f3a4a;
+            color: #ffc8d0;
+        }
+
+        .btn-danger:hover {
+            background: #692a3a;
+            border-color: #d45a6e;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border-color: #2f4a6a;
+        }
+
+        .btn-outline:hover {
+            background: #1a2a40;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            pointer-events: none;
+            filter: grayscale(0.3);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.8rem;
+        }
+
+        .card {
+            background: rgba(10, 18, 30, 0.7);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border-radius: 28px;
+            padding: 1.5rem 1.4rem;
+            border: 1px solid rgba(0, 150, 255, 0.08);
+            box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.6);
+            transition: transform 0.2s ease, border-color 0.2s;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            border-color: #1a5f9e;
+        }
+
+        .card .sub {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #b0daff;
+            word-break: break-all;
+        }
+
+        .card .url {
+            color: #9bb8d9;
+            font-size: 0.9rem;
+            word-break: break-all;
+            opacity: 0.8;
+        }
+
+        .card .meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            color: #5e7d9e;
+            margin-top: 0.2rem;
+            border-top: 1px solid #1b2a40;
+            padding-top: 0.5rem;
+        }
+
+        .card .actions-card {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .card .btn-sm {
+            padding: 0.25rem 1rem;
+            border-radius: 40px;
+            font-size: 0.75rem;
+            background: #162a42;
+            border: 1px solid #264b6e;
+            color: #c2ddff;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+
+        .card .btn-sm:hover {
+            background: #1e3d62;
+            border-color: #4a8fd4;
+        }
+
+        .card .btn-sm.danger {
+            background: #391d27;
+            border-color: #753a48;
+        }
+
+        .card .btn-sm.danger:hover {
+            background: #612b3a;
+        }
+
+        .status-badge {
+            background: #0f2a1f;
+            color: #80d4a8;
+            font-size: 0.65rem;
+            padding: 0.1rem 0.9rem;
+            border-radius: 50px;
+            border: 1px solid #1f6a44;
+            display: inline-block;
+        }
+
+        .toast-container {
+            position: fixed;
+            top: 1.5rem;
+            right: 1.5rem;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            max-width: 360px;
+            width: 100%;
+            pointer-events: none;
+        }
+
+        .toast {
+            background: #0d1a2b;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid #2a527a;
+            padding: 0.9rem 1.4rem;
+            border-radius: 40px;
+            box-shadow: 0 14px 35px rgba(0,0,0,0.6);
+            color: #e0edff;
+            font-size: 0.95rem;
+            transform: translateX(120%);
+            opacity: 0;
+            transition: transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.1), opacity 0.2s ease;
+            pointer-events: all;
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .toast.error {
+            border-color: #b64a5a;
+            background: #24161e;
+        }
+
+        .toast.success {
+            border-color: #2d8f6a;
+        }
+
+        .toast .close-toast {
+            margin-left: auto;
+            background: none;
+            border: none;
+            color: #6f94bb;
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 4rem 1rem;
+            color: #4a6a88;
+            background: rgba(0, 20, 40, 0.2);
+            border-radius: 60px;
+            border: 1px dashed #1f3a55;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal {
+            background: #101b2c;
+            border-radius: 2.5rem;
+            padding: 2.2rem 2rem;
+            max-width: 500px;
+            width: 100%;
+            border: 1px solid #1e4370;
+            box-shadow: 0 30px 70px rgba(0, 0, 0, 0.7);
+            transform: scale(0.95);
+            transition: transform 0.2s ease;
+        }
+
+        .modal-overlay.active .modal {
+            transform: scale(1);
+        }
+
+        .modal h2 {
+            margin-bottom: 1.5rem;
+            font-weight: 500;
+            color: #b8d6ff;
+        }
+
+        .modal label {
+            display: block;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: #8aaacf;
+        }
+
+        .modal input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border-radius: 60px;
+            border: 1px solid #243b59;
+            background: #0c1628;
+            color: #eef2f6;
+            margin-top: 0.25rem;
+            outline: none;
+        }
+
+        .modal input:focus {
+            border-color: #3a81d4;
+        }
+
+        .modal .modal-actions {
+            display: flex;
+            gap: 0.8rem;
+            margin-top: 2rem;
+            justify-content: flex-end;
+        }
+
+        .loader {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255,255,255,0.2);
+            border-top: 2px solid #80c8ff;
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 700px) {
+            .dashboard { padding: 1.5rem 1rem; }
+            .header { flex-direction: column; align-items: stretch; }
+            .stats { justify-content: flex-start; }
+            .actions { flex-direction: column; align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard" id="app">
+        <div class="header">
+            <div class="logo">
+                <h1>⚡ sub<span>manager</span></h1>
+                <div style="font-size:0.8rem; color:#4a7b9e; margin-top:0.1rem;">cutehub.top</div>
+            </div>
+            <div class="stats">
+                <div class="stat-card"><span>📦 Total</span> <strong class="num" id="totalCount">0</strong></div>
+                <div class="stat-card"><span>✅ Active</span> <strong class="num" id="activeCount">0</strong></div>
+                <div class="stat-card"><span>🟢 DB</span> <span id="dbStatus">●</span></div>
+            </div>
+        </div>
+
+        <div class="actions">
+            <div class="search-wrap">
+                <input type="text" id="searchInput" placeholder="Search subdomain or URL..." />
+            </div>
+            <button class="btn btn-primary" id="createBtn">＋ Create</button>
+            <button class="btn btn-outline" id="refreshBtn">⟳ Refresh</button>
+        </div>
+
+        <div id="mappingsGrid" class="grid"></div>
+        <div id="emptyState" class="empty" style="display:none;">✨ No mappings yet · create your first subdomain</div>
+    </div>
+
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <h2>✨ New subdomain</h2>
+            <label>Target URL</label>
+            <input type="url" id="modalUrl" placeholder="https://example.com" />
+            <label>Subdomain</label>
+            <input type="text" id="modalSub" placeholder="mywebsite" maxlength="63" />
+            <div style="font-size:0.75rem; color:#4f789e; margin-top:0.4rem;">.cutehub.top</div>
+            <div class="modal-actions">
+                <button class="btn btn-outline" id="modalCancel">Cancel</button>
+                <button class="btn btn-primary" id="modalSave">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        (function() {
+            "use strict";
+
+            const grid = document.getElementById('mappingsGrid');
+            const emptyState = document.getElementById('emptyState');
+            const totalSpan = document.getElementById('totalCount');
+            const activeSpan = document.getElementById('activeCount');
+            const dbStatus = document.getElementById('dbStatus');
+            const searchInput = document.getElementById('searchInput');
+
+            const createBtn = document.getElementById('createBtn');
+            const refreshBtn = document.getElementById('refreshBtn');
+            const modalOverlay = document.getElementById('modalOverlay');
+            const modalUrl = document.getElementById('modalUrl');
+            const modalSub = document.getElementById('modalSub');
+            const modalCancel = document.getElementById('modalCancel');
+            const modalSave = document.getElementById('modalSave');
+
+            const toastContainer = document.getElementById('toastContainer');
+
+            let mappings = [];
+            let isCreating = false;
+
+            function showToast(message, type = 'success') {
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.innerHTML = `<span>${message}</span><button class="close-toast">✕</button>`;
+                toastContainer.appendChild(toast);
+                requestAnimationFrame(() => toast.classList.add('show'));
+
+                const close = () => {
+                    toast.classList.remove('show');
+                    setTimeout(() => toast.remove(), 300);
+                };
+                toast.querySelector('.close-toast').addEventListener('click', close);
+                setTimeout(close, 5000);
+            }
+
+            function formatDate(iso) {
+                if (!iso) return '—';
+                const d = new Date(iso);
+                return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            }
+
+            function escapeHtml(str) {
+                const div = document.createElement('div');
+                div.textContent = str;
+                return div.innerHTML;
+            }
+
+            function renderGrid() {
+                const q = searchInput.value.trim().toLowerCase();
+                let filtered = mappings;
+                if (q) {
+                    filtered = mappings.filter(m => 
+                        m.subdomain.toLowerCase().includes(q) || 
+                        m.targetUrl.toLowerCase().includes(q)
+                    );
+                }
+
+                if (filtered.length === 0) {
+                    grid.innerHTML = '';
+                    emptyState.style.display = 'block';
+                } else {
+                    emptyState.style.display = 'none';
+                    grid.innerHTML = filtered.map(m => `
+                        <div class="card" data-id="${m._id}">
+                            <div class="sub">${escapeHtml(m.subdomain)}<span style="font-weight:300;color:#4f7ea0;font-size:0.8rem;">.cutehub.top</span></div>
+                            <div class="url">${escapeHtml(m.targetUrl)}</div>
+                            <div class="meta">
+                                <span>🕒 ${formatDate(m.createdAt)}</span>
+                                <span class="status-badge">● active</span>
+                            </div>
+                            <div class="actions-card">
+                                <button class="btn-sm" data-action="copy" data-sub="${m.subdomain}">📋 Copy</button>
+                                <button class="btn-sm" data-action="open" data-url="https://${m.subdomain}.cutehub.top">↗ Open</button>
+                                <button class="btn-sm danger" data-action="delete" data-id="${m._id}">✕ Delete</button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+
+                totalSpan.textContent = mappings.length;
+                activeSpan.textContent = mappings.length;
+            }
+
+            async function fetchList() {
+                try {
+                    const res = await fetch('/list');
+                    if (!res.ok) throw new Error('Failed to fetch');
+                    const data = await res.json();
+                    mappings = data.mappings || [];
+                    renderGrid();
+                    dbStatus.textContent = '●';
+                    dbStatus.style.color = '#5fdb9a';
+                } catch (e) {
+                    dbStatus.textContent = '⚠';
+                    dbStatus.style.color = '#e68a8a';
+                    showToast('Could not fetch mappings', 'error');
+                }
+            }
+
+            async function checkStatus() {
+                try {
+                    const res = await fetch('/status');
+                    if (res.ok) {
+                        dbStatus.textContent = '●';
+                        dbStatus.style.color = '#5fdb9a';
+                    } else {
+                        dbStatus.textContent = '⚠';
+                        dbStatus.style.color = '#e68a8a';
+                    }
+                } catch {
+                    dbStatus.textContent = '⚠';
+                    dbStatus.style.color = '#e68a8a';
+                }
+            }
+
+            async function deleteMapping(id) {
+                try {
+                    const res = await fetch(`/delete/${id}`, { method: 'DELETE' });
+                    const json = await res.json();
+                    if (!res.ok) throw new Error(json.message || 'Delete failed');
+                    showToast('Deleted successfully', 'success');
+                    await fetchList();
+                } catch (e) {
+                    showToast(e.message || 'Delete error', 'error');
+                }
+            }
+
+            async function createMapping(url, sub) {
+                if (isCreating) return;
+                isCreating = true;
+                modalSave.disabled = true;
+                modalSave.innerHTML = '<span class="loader"></span>';
+
+                try {
+                    const res = await fetch('/create', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ targetUrl: url, subdomain: sub })
+                    });
+                    const json = await res.json();
+                    if (!res.ok) {
+                        throw new Error(json.message || 'Creation failed');
+                    }
+                    showToast(`✅ ${sub}.cutehub.top created`, 'success');
+                    closeModal();
+                    await fetchList();
+                } catch (e) {
+                    showToast(e.message || 'Error creating subdomain', 'error');
+                } finally {
+                    isCreating = false;
+                    modalSave.disabled = false;
+                    modalSave.textContent = 'Create';
+                }
+            }
+
+            function openModal() {
+                modalUrl.value = '';
+                modalSub.value = '';
+                modalOverlay.classList.add('active');
+                modalUrl.focus();
+            }
+
+            function closeModal() {
+                modalOverlay.classList.remove('active');
+            }
+
+            grid.addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-action]');
+                if (!btn) return;
+                const action = btn.dataset.action;
+
+                if (action === 'copy') {
+                    const sub = btn.dataset.sub;
+                    navigator.clipboard?.writeText(`${sub}.cutehub.top`).then(() => {
+                        showToast('📋 Copied!', 'success');
+                    }).catch(() => showToast('Copy failed', 'error'));
+                }
+
+                if (action === 'open') {
+                    const url = btn.dataset.url;
+                    window.open(url, '_blank');
+                }
+
+                if (action === 'delete') {
+                    const id = btn.dataset.id;
+                    if (confirm('Delete this subdomain mapping?')) {
+                        deleteMapping(id);
+                    }
+                }
+            });
+
+            createBtn.addEventListener('click', openModal);
+            modalCancel.addEventListener('click', closeModal);
+            modalOverlay.addEventListener('click', (e) => {
+                if (e.target === modalOverlay) closeModal();
+            });
+
+            modalSave.addEventListener('click', () => {
+                const url = modalUrl.value.trim();
+                const sub = modalSub.value.trim().toLowerCase();
+
+                if (!url) {
+                    showToast('Please enter a valid URL', 'error');
+                    return;
+                }
+                try { new URL(url); } catch { showToast('Invalid URL format', 'error'); return; }
+
+                if (!sub) {
+                    showToast('Subdomain name required', 'error');
+                    return;
+                }
+                if (!/^[a-zA-Z0-9-]+$/.test(sub)) {
+                    showToast('Only letters, numbers, hyphen', 'error');
+                    return;
+                }
+                if (sub.length > 63) {
+                    showToast('Max 63 characters', 'error');
+                    return;
+                }
+                if (mappings.some(m => m.subdomain === sub)) {
+                    showToast(`"${sub}" already exists`, 'error');
+                    return;
+                }
+                createMapping(url, sub);
+            });
+
+            refreshBtn.addEventListener('click', () => {
+                fetchList();
+                checkStatus();
+                showToast('Refreshed', 'success');
+            });
+
+            let searchTimer;
+            searchInput.addEventListener('input', () => {
+                clearTimeout(searchTimer);
+                searchTimer = setTimeout(renderGrid, 120);
+            });
+
+            async function init() {
+                await fetchList();
+                await checkStatus();
+                setInterval(checkStatus, 30000);
+            }
+
+            init();
+        })();
+    </script>
+</body>
+</html>
