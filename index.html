@@ -202,6 +202,17 @@
             background: #1a2a40;
         }
 
+        .btn-success {
+            background: #0a3d2a;
+            border-color: #2d8f6a;
+            color: #80d4a8;
+        }
+
+        .btn-success:hover {
+            background: #1a6a4a;
+            border-color: #4aaf8a;
+        }
+
         .btn:disabled {
             opacity: 0.5;
             pointer-events: none;
@@ -210,7 +221,7 @@
 
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 1.5rem;
             margin-top: 1.8rem;
         }
@@ -241,16 +252,21 @@
             word-break: break-all;
         }
 
-        .card .url {
+        .card .cname {
             color: #9bb8d9;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             word-break: break-all;
             opacity: 0.8;
+            background: #0a1420;
+            padding: 0.3rem 0.8rem;
+            border-radius: 12px;
+            font-family: monospace;
         }
 
         .card .meta {
             display: flex;
             justify-content: space-between;
+            align-items: center;
             font-size: 0.7rem;
             color: #5e7d9e;
             margin-top: 0.2rem;
@@ -290,14 +306,39 @@
             background: #612b3a;
         }
 
-        .status-badge {
+        .card .btn-sm.success {
             background: #0f2a1f;
-            color: #80d4a8;
-            font-size: 0.65rem;
+            border-color: #1f6a44;
+        }
+
+        .card .btn-sm.success:hover {
+            background: #1a4a3a;
+            border-color: #3a8a6a;
+        }
+
+        .status-badge {
             padding: 0.1rem 0.9rem;
             border-radius: 50px;
-            border: 1px solid #1f6a44;
+            font-size: 0.65rem;
             display: inline-block;
+        }
+
+        .status-badge.pending {
+            background: #2a2a0f;
+            color: #d4d480;
+            border: 1px solid #6a6a1f;
+        }
+
+        .status-badge.verified {
+            background: #0f2a1f;
+            color: #80d4a8;
+            border: 1px solid #1f6a44;
+        }
+
+        .status-badge.failed {
+            background: #2a0f0f;
+            color: #d48080;
+            border: 1px solid #6a1f1f;
         }
 
         .toast-container {
@@ -308,7 +349,7 @@
             display: flex;
             flex-direction: column;
             gap: 0.6rem;
-            max-width: 360px;
+            max-width: 420px;
             width: 100%;
             pointer-events: none;
         }
@@ -322,7 +363,7 @@
             border-radius: 40px;
             box-shadow: 0 14px 35px rgba(0,0,0,0.6);
             color: #e0edff;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             transform: translateX(120%);
             opacity: 0;
             transition: transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.1), opacity 0.2s ease;
@@ -353,6 +394,16 @@
             color: #6f94bb;
             font-size: 1.2rem;
             cursor: pointer;
+        }
+
+        .toast .dns-info {
+            font-size: 0.75rem;
+            color: #8aaacf;
+            background: #0a1420;
+            padding: 0.3rem 0.8rem;
+            border-radius: 12px;
+            font-family: monospace;
+            margin-top: 0.3rem;
         }
 
         .empty {
@@ -388,7 +439,7 @@
             background: #101b2c;
             border-radius: 2.5rem;
             padding: 2.2rem 2rem;
-            max-width: 500px;
+            max-width: 550px;
             width: 100%;
             border: 1px solid #1e4370;
             box-shadow: 0 30px 70px rgba(0, 0, 0, 0.7);
@@ -413,7 +464,7 @@
             color: #8aaacf;
         }
 
-        .modal input {
+        .modal input, .modal select {
             width: 100%;
             padding: 0.75rem 1rem;
             border-radius: 60px;
@@ -424,8 +475,14 @@
             outline: none;
         }
 
-        .modal input:focus {
+        .modal input:focus, .modal select:focus {
             border-color: #3a81d4;
+        }
+
+        .modal .hint {
+            font-size: 0.7rem;
+            color: #4f789e;
+            margin-top: 0.3rem;
         }
 
         .modal .modal-actions {
@@ -452,6 +509,7 @@
             .header { flex-direction: column; align-items: stretch; }
             .stats { justify-content: flex-start; }
             .actions { flex-direction: column; align-items: stretch; }
+            .modal { padding: 1.5rem 1rem; }
         }
     </style>
 </head>
@@ -467,6 +525,7 @@
                 <div class="stat-card"><span>📦 Total</span> <strong class="num" id="totalCount">0</strong></div>
                 <div class="stat-card"><span>✅ Active</span> <strong class="num" id="activeCount">0</strong></div>
                 <div class="stat-card"><span>🟢 DB</span> <span id="dbStatus">●</span></div>
+                <div class="stat-card"><span>🔴 Render</span> <span id="renderStatus">●</span></div>
             </div>
         </div>
 
@@ -484,12 +543,15 @@
 
     <div class="modal-overlay" id="modalOverlay">
         <div class="modal">
-            <h2>✨ New subdomain</h2>
-            <label>Target URL</label>
-            <input type="url" id="modalUrl" placeholder="https://example.com" />
+            <h2>✨ New Subdomain</h2>
             <label>Subdomain</label>
             <input type="text" id="modalSub" placeholder="mywebsite" maxlength="63" />
-            <div style="font-size:0.75rem; color:#4f789e; margin-top:0.4rem;">.cutehub.top</div>
+            <div class="hint">.cutehub.top (letters, numbers, hyphens only)</div>
+            
+            <label>CNAME Target (from Render)</label>
+            <input type="text" id="modalCname" placeholder="cname.vercel-dns.com" />
+            <div class="hint">The target value from Render Custom Domain</div>
+            
             <div class="modal-actions">
                 <button class="btn btn-outline" id="modalCancel">Cancel</button>
                 <button class="btn btn-primary" id="modalSave">Create</button>
@@ -508,13 +570,14 @@
             const totalSpan = document.getElementById('totalCount');
             const activeSpan = document.getElementById('activeCount');
             const dbStatus = document.getElementById('dbStatus');
+            const renderStatus = document.getElementById('renderStatus');
             const searchInput = document.getElementById('searchInput');
 
             const createBtn = document.getElementById('createBtn');
             const refreshBtn = document.getElementById('refreshBtn');
             const modalOverlay = document.getElementById('modalOverlay');
-            const modalUrl = document.getElementById('modalUrl');
             const modalSub = document.getElementById('modalSub');
+            const modalCname = document.getElementById('modalCname');
             const modalCancel = document.getElementById('modalCancel');
             const modalSave = document.getElementById('modalSave');
 
@@ -523,10 +586,15 @@
             let mappings = [];
             let isCreating = false;
 
-            function showToast(message, type = 'success') {
+            function showToast(message, type = 'success', extra = null) {
                 const toast = document.createElement('div');
                 toast.className = `toast ${type}`;
-                toast.innerHTML = `<span>${message}</span><button class="close-toast">✕</button>`;
+                let content = `<span>${message}</span>`;
+                if (extra) {
+                    content += `<div class="dns-info">${extra}</div>`;
+                }
+                content += `<button class="close-toast">✕</button>`;
+                toast.innerHTML = content;
                 toastContainer.appendChild(toast);
                 requestAnimationFrame(() => toast.classList.add('show'));
 
@@ -535,7 +603,7 @@
                     setTimeout(() => toast.remove(), 300);
                 };
                 toast.querySelector('.close-toast').addEventListener('click', close);
-                setTimeout(close, 5000);
+                setTimeout(close, 8000);
             }
 
             function formatDate(iso) {
@@ -556,7 +624,8 @@
                 if (q) {
                     filtered = mappings.filter(m => 
                         m.subdomain.toLowerCase().includes(q) || 
-                        m.targetUrl.toLowerCase().includes(q)
+                        (m.targetUrl && m.targetUrl.toLowerCase().includes(q)) ||
+                        (m.cnameTarget && m.cnameTarget.toLowerCase().includes(q))
                     );
                 }
 
@@ -565,25 +634,28 @@
                     emptyState.style.display = 'block';
                 } else {
                     emptyState.style.display = 'none';
-                    grid.innerHTML = filtered.map(m => `
+                    grid.innerHTML = filtered.map(m => {
+                        const statusClass = m.status || 'pending';
+                        return `
                         <div class="card" data-id="${m._id}">
                             <div class="sub">${escapeHtml(m.subdomain)}<span style="font-weight:300;color:#4f7ea0;font-size:0.8rem;">.cutehub.top</span></div>
-                            <div class="url">${escapeHtml(m.targetUrl)}</div>
+                            <div class="cname">➜ ${escapeHtml(m.cnameTarget)}</div>
                             <div class="meta">
                                 <span>🕒 ${formatDate(m.createdAt)}</span>
-                                <span class="status-badge">● active</span>
+                                <span class="status-badge ${statusClass}">● ${statusClass}</span>
                             </div>
                             <div class="actions-card">
                                 <button class="btn-sm" data-action="copy" data-sub="${m.subdomain}">📋 Copy</button>
-                                <button class="btn-sm" data-action="open" data-url="https://${m.subdomain}.cutehub.top">↗ Open</button>
+                                <button class="btn-sm" data-action="copy-cname" data-cname="${m.cnameTarget}">📋 CNAME</button>
+                                ${statusClass !== 'verified' ? `<button class="btn-sm success" data-action="verify" data-id="${m._id}">🔄 Verify</button>` : ''}
                                 <button class="btn-sm danger" data-action="delete" data-id="${m._id}">✕ Delete</button>
                             </div>
                         </div>
-                    `).join('');
+                    `}).join('');
                 }
 
                 totalSpan.textContent = mappings.length;
-                activeSpan.textContent = mappings.length;
+                activeSpan.textContent = mappings.filter(m => m.status === 'verified').length;
             }
 
             async function fetchList() {
@@ -606,11 +678,11 @@
                 try {
                     const res = await fetch('/status');
                     if (res.ok) {
-                        dbStatus.textContent = '●';
-                        dbStatus.style.color = '#5fdb9a';
-                    } else {
-                        dbStatus.textContent = '⚠';
-                        dbStatus.style.color = '#e68a8a';
+                        const data = await res.json();
+                        dbStatus.textContent = data.database === 'connected' ? '●' : '⚠';
+                        dbStatus.style.color = data.database === 'connected' ? '#5fdb9a' : '#e68a8a';
+                        renderStatus.textContent = data.render === 'configured' ? '●' : '⚠';
+                        renderStatus.style.color = data.render === 'configured' ? '#5fdb9a' : '#e68a8a';
                     }
                 } catch {
                     dbStatus.textContent = '⚠';
@@ -619,6 +691,7 @@
             }
 
             async function deleteMapping(id) {
+                if (!confirm('Delete this subdomain mapping?')) return;
                 try {
                     const res = await fetch(`/delete/${id}`, { method: 'DELETE' });
                     const json = await res.json();
@@ -630,7 +703,19 @@
                 }
             }
 
-            async function createMapping(url, sub) {
+            async function verifyMapping(id) {
+                try {
+                    const res = await fetch(`/verify/${id}`, { method: 'POST' });
+                    const json = await res.json();
+                    if (!res.ok) throw new Error(json.message || 'Verification failed');
+                    showToast(json.message, json.success ? 'success' : 'error');
+                    await fetchList();
+                } catch (e) {
+                    showToast(e.message || 'Verification error', 'error');
+                }
+            }
+
+            async function createMapping(subdomain, cnameTarget) {
                 if (isCreating) return;
                 isCreating = true;
                 modalSave.disabled = true;
@@ -640,13 +725,15 @@
                     const res = await fetch('/create', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ targetUrl: url, subdomain: sub })
+                        body: JSON.stringify({ subdomain, cnameTarget })
                     });
                     const json = await res.json();
                     if (!res.ok) {
                         throw new Error(json.message || 'Creation failed');
                     }
-                    showToast(`✅ ${sub}.cutehub.top created`, 'success');
+                    
+                    const dnsInfo = `CNAME ${json.mapping.subdomain}.cutehub.top → ${json.mapping.cnameTarget}`;
+                    showToast(`✅ ${subdomain}.cutehub.top created!`, 'success', dnsInfo);
                     closeModal();
                     await fetchList();
                 } catch (e) {
@@ -659,16 +746,17 @@
             }
 
             function openModal() {
-                modalUrl.value = '';
                 modalSub.value = '';
+                modalCname.value = '';
                 modalOverlay.classList.add('active');
-                modalUrl.focus();
+                modalSub.focus();
             }
 
             function closeModal() {
                 modalOverlay.classList.remove('active');
             }
 
+            // Event Delegation
             grid.addEventListener('click', (e) => {
                 const btn = e.target.closest('[data-action]');
                 if (!btn) return;
@@ -681,16 +769,21 @@
                     }).catch(() => showToast('Copy failed', 'error'));
                 }
 
-                if (action === 'open') {
-                    const url = btn.dataset.url;
-                    window.open(url, '_blank');
+                if (action === 'copy-cname') {
+                    const cname = btn.dataset.cname;
+                    navigator.clipboard?.writeText(cname).then(() => {
+                        showToast('📋 CNAME copied!', 'success');
+                    }).catch(() => showToast('Copy failed', 'error'));
+                }
+
+                if (action === 'verify') {
+                    const id = btn.dataset.id;
+                    verifyMapping(id);
                 }
 
                 if (action === 'delete') {
                     const id = btn.dataset.id;
-                    if (confirm('Delete this subdomain mapping?')) {
-                        deleteMapping(id);
-                    }
+                    deleteMapping(id);
                 }
             });
 
@@ -701,14 +794,8 @@
             });
 
             modalSave.addEventListener('click', () => {
-                const url = modalUrl.value.trim();
                 const sub = modalSub.value.trim().toLowerCase();
-
-                if (!url) {
-                    showToast('Please enter a valid URL', 'error');
-                    return;
-                }
-                try { new URL(url); } catch { showToast('Invalid URL format', 'error'); return; }
+                const cname = modalCname.value.trim();
 
                 if (!sub) {
                     showToast('Subdomain name required', 'error');
@@ -722,11 +809,15 @@
                     showToast('Max 63 characters', 'error');
                     return;
                 }
+                if (!cname) {
+                    showToast('CNAME target required', 'error');
+                    return;
+                }
                 if (mappings.some(m => m.subdomain === sub)) {
                     showToast(`"${sub}" already exists`, 'error');
                     return;
                 }
-                createMapping(url, sub);
+                createMapping(sub, cname);
             });
 
             refreshBtn.addEventListener('click', () => {
