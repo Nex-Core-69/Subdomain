@@ -1,33 +1,50 @@
 // ============================================
 // COMPLETE SUBDOMAIN MANAGER - index.js
-// For cutehub.top
+// Optimized for Vercel Serverless
 // ============================================
 
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const { createProxyMiddleware } = require('http-proxy-middleware');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 // ============================================
-// MONGODB CONNECTION
+// MONGODB CONNECTION (Vercel-এর জন্য)
 // ============================================
-const MONGODB_URI = 'mongodb+srv://txckibutsujimuzan:muzanbot@cluster0.yjpczpc.mongodb.net/subdomainn?retryWrites=true&w=majority&appName=Cluster0';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://txckibutsujimuzan:muzanbot@cluster0.yjpczpc.mongodb.net/subdomainn?retryWrites=true&w=majority&appName=Cluster0';
 // ⚠️ Replace the above URI with your actual MongoDB connection string
+// অথবা Vercel Environment Variable হিসেবে সেট করুন
 
-mongoose.connect(MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => console.log('✅ MongoDB connected successfully'))
-.catch(err => {
-  console.error('❌ MongoDB connection error:', err.message);
-  process.exit(1);
-});
+// Cached connection for serverless
+let cached = global.mongoose;
+
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
+
+async function connectDB() {
+  if (cached.conn) {
+    return cached.conn;
+  }
+
+  if (!cached.promise) {
+    const opts = {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      bufferCommands: false,
+      maxPoolSize: 1,
+    };
+
+    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+      console.log('✅ MongoDB connected successfully');
+      return mongoose;
+    });
+  }
+  cached.conn = await cached.promise;
+  return cached.conn;
+}
 
 // ============================================
 // MONGODB SCHEMA
@@ -59,30 +76,16 @@ const mappingSchema = new mongoose.Schema({
   timestamps: true
 });
 
-const Mapping = mongoose.model('Mapping', mappingSchema);
+const Mapping = mongoose.models.Mapping || mongoose.model('Mapping', mappingSchema);
 
 // ============================================
 // MIDDLEWARE
 // ============================================
-app.use(helmet({
-  contentSecurityPolicy: false,
-  crossOriginEmbedderPolicy: false
-}));
-
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
-});
-app.use('/api/', limiter);
-
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ============================================
-// STATIC FILES - Serve index.html
-// ============================================
+// Serve static files (index.html)
 const path = require('path');
 app.use(express.static(__dirname));
 
@@ -93,6 +96,7 @@ app.use(express.static(__dirname));
 // GET /status - Check MongoDB status
 app.get('/status', async (req, res) => {
   try {
+    await connectDB();
     const state = mongoose.connection.readyState;
     const status = state === 1 ? 'connected' : 'disconnected';
     res.json({ 
@@ -108,6 +112,7 @@ app.get('/status', async (req, res) => {
 // GET /list - Get all mappings
 app.get('/list', async (req, res) => {
   try {
+    await connectDB();
     const mappings = await Mapping.find().sort({ createdAt: -1 });
     res.json({ 
       success: true, 
@@ -126,6 +131,7 @@ app.get('/list', async (req, res) => {
 // POST /create - Create new mapping
 app.post('/create', async (req, res) => {
   try {
+    await connectDB();
     const { subdomain, targetUrl } = req.body;
 
     // Validation
@@ -197,6 +203,7 @@ app.post('/create', async (req, res) => {
 // DELETE /delete/:id - Delete mapping
 app.delete('/delete/:id', async (req, res) => {
   try {
+    await connectDB();
     const { id } = req.params;
     
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -264,6 +271,7 @@ app.use(async (req, res, next) => {
   }
 
   try {
+    await connectDB();
     // Find the mapping in database
     const mapping = await Mapping.findOne({ subdomain });
     
@@ -328,14 +336,12 @@ app.use(async (req, res, next) => {
       target: cleanTarget,
       changeOrigin: true,
       secure: true,
-      ws: true, // WebSocket support
+      ws: true,
       xfwd: true,
       proxyReqPathResolver: (req) => {
-        // Preserve the original path
         return req.originalUrl || req.url;
       },
       onProxyReq: (proxyReq, req, res) => {
-        // Forward all headers
         if (req.headers) {
           Object.keys(req.headers).forEach(key => {
             if (key !== 'host' && key !== 'connection') {
@@ -345,10 +351,7 @@ app.use(async (req, res, next) => {
         }
       },
       onProxyRes: (proxyRes, req, res) => {
-        // Keep the original URL in the browser
-        // Remove any location headers that might redirect
         proxyRes.headers['location'] = undefined;
-        // Set CORS headers
         proxyRes.headers['Access-Control-Allow-Origin'] = '*';
       },
       onError: (err, req, res) => {
@@ -410,30 +413,16 @@ app.use(async (req, res, next) => {
 });
 
 // ============================================
-// START SERVER
+// EXPORT FOR VERCEL
 // ============================================
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Subdomain Manager running on port ${PORT}`);
-  console.log(`📡 Dashboard: http://localhost:${PORT}`);
-  console.log(`🌐 Domain: cutehub.top`);
-  console.log(`💾 MongoDB: ${mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'}`);
-});
+// This is the serverless handler
+module.exports = app;
 
-// Handle graceful shutdown
-process.on('SIGINT', async () => {
-  await mongoose.connection.close();
-  console.log('\n👋 MongoDB connection closed');
-  process.exit(0);
-});
-
-// ============================================
-// ERROR HANDLING
-// ============================================
-process.on('unhandledRejection', (error) => {
-  console.error('Unhandled Rejection:', error);
-});
-
-process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:', error);
-  process.exit(1);
-});
+// For local development
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`🚀 Subdomain Manager running on port ${PORT}`);
+    console.log(`📡 Dashboard: http://localhost:${PORT}`);
+  });
+}
