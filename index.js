@@ -1,20 +1,27 @@
 // ============================================
-// SUBDOMAIN MANAGER - Vercel Serverless
+// SUBDOMAIN MANAGER with Render API Integration
+// For Vercel - Works with Render Custom Domains
 // ============================================
 
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const { createProxyMiddleware } = require('http-proxy-middleware');
+const axios = require('axios');
 const path = require('path');
 
 const app = express();
 
 // ============================================
+// ENVIRONMENT VARIABLES
+// ============================================
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://your_username:your_password@cluster.mongodb.net/subdomain_manager?retryWrites=true&w=majority';
+const RENDER_API_KEY = process.env.RENDER_API_KEY || 'your_render_api_key';
+const RENDER_SERVICE_ID = process.env.RENDER_SERVICE_ID || 'your_render_service_id';
+const RENDER_OWNER_ID = process.env.RENDER_OWNER_ID || 'your_render_owner_id';
+
+// ============================================
 // MONGODB CONNECTION (Cached for Serverless)
 // ============================================
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://txckibutsujimuzan:muzanbot@cluster0.yjpczpc.mongodb.net/subdomainn?retryWrites=true&w=majority&appName=Cluster0';
-
 let cached = global.mongoose;
 
 if (!cached) {
@@ -60,6 +67,20 @@ const mappingSchema = new mongoose.Schema({
     type: String,
     required: true,
     trim: true
+  },
+  cnameTarget: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'verified', 'failed'],
+    default: 'pending'
+  },
+  renderDomainId: {
+    type: String,
+    default: null
   }
 }, {
   timestamps: true
@@ -75,7 +96,112 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ============================================
-// SERVE INDEX.HTML (Root route)
+// RENDER API FUNCTIONS
+// ============================================
+
+// Add custom domain to Render
+async function addRenderCustomDomain(subdomain, cnameTarget) {
+  try {
+    const domain = `${subdomain}.cutehub.top`;
+    
+    const response = await axios.post(
+      `https://api.render.com/v1/services/${RENDER_SERVICE_ID}/custom-domains`,
+      {
+        name: domain,
+        redirect: null,
+        verificationMethod: 'cname'
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${RENDER_API_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    return {
+      success: true,
+      domainId: response.data.id,
+      status: response.data.status,
+      cnameTarget: response.data.cnameTarget || cnameTarget
+    };
+  } catch (error) {
+    console.error('Render API Error:', error.response?.data || error.message);
+    return {
+      success: false,
+      message: error.response?.data?.message || error.message
+    };
+  }
+}
+
+// Verify custom domain on Render
+async function verifyRenderDomain(domainId) {
+  try {
+    const response = await axios.post(
+      `https://api.render.com/v1/services/${RENDER_SERVICE_ID}/custom-domains/${domainId}/verify`,
+      {},
+      {
+        headers: {
+          'Authorization': `Bearer ${RENDER_API_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    return {
+      success: true,
+      status: response.data.status
+    };
+  } catch (error) {
+    console.error('Verify Error:', error.response?.data || error.message);
+    return {
+      success: false,
+      message: error.response?.data?.message || error.message
+    };
+  }
+}
+
+// Delete custom domain from Render
+async function deleteRenderDomain(domainId) {
+  try {
+    await axios.delete(
+      `https://api.render.com/v1/services/${RENDER_SERVICE_ID}/custom-domains/${domainId}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${RENDER_API_KEY}`
+        }
+      }
+    );
+    return { success: true };
+  } catch (error) {
+    console.error('Delete Domain Error:', error.response?.data || error.message);
+    return {
+      success: false,
+      message: error.response?.data?.message || error.message
+    };
+  }
+}
+
+// Get all custom domains from Render
+async function getRenderDomains() {
+  try {
+    const response = await axios.get(
+      `https://api.render.com/v1/services/${RENDER_SERVICE_ID}/custom-domains`,
+      {
+        headers: {
+          'Authorization': `Bearer ${RENDER_API_KEY}`
+        }
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Get Domains Error:', error.response?.data || error.message);
+    return [];
+  }
+}
+
+// ============================================
+// SERVE INDEX.HTML
 // ============================================
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
@@ -92,6 +218,7 @@ app.get('/status', async (req, res) => {
     res.json({ 
       status: 'ok', 
       database: state === 1 ? 'connected' : 'disconnected',
+      render: RENDER_API_KEY ? 'configured' : 'not_configured',
       timestamp: new Date().toISOString()
     });
   } catch (error) {
@@ -103,7 +230,24 @@ app.get('/list', async (req, res) => {
   try {
     await connectDB();
     const mappings = await Mapping.find().sort({ createdAt: -1 });
-    res.json({ success: true, count: mappings.length, mappings });
+    
+    // Get Render domains for status sync
+    const renderDomains = await getRenderDomains();
+    const renderDomainMap = {};
+    renderDomains.forEach(d => {
+      renderDomainMap[d.name] = d.status;
+    });
+
+    // Update status from Render
+    const updatedMappings = mappings.map(m => {
+      const domainName = `${m.subdomain}.cutehub.top`;
+      if (renderDomainMap[domainName]) {
+        m.status = renderDomainMap[domainName] === 'verified' ? 'verified' : 'pending';
+      }
+      return m;
+    });
+
+    res.json({ success: true, count: updatedMappings.length, mappings: updatedMappings });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -112,9 +256,9 @@ app.get('/list', async (req, res) => {
 app.post('/create', async (req, res) => {
   try {
     await connectDB();
-    const { subdomain, targetUrl } = req.body;
+    const { subdomain, cnameTarget } = req.body;
 
-    if (!subdomain || !targetUrl) {
+    if (!subdomain || !cnameTarget) {
       return res.status(400).json({ success: false, message: 'All fields required' });
     }
 
@@ -126,25 +270,75 @@ app.post('/create', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Max 63 characters' });
     }
 
-    try {
-      new URL(targetUrl);
-    } catch {
-      return res.status(400).json({ success: false, message: 'Invalid URL' });
-    }
-
+    // Check duplicate
     const existing = await Mapping.findOne({ subdomain: subdomain.toLowerCase() });
     if (existing) {
       return res.status(409).json({ success: false, message: `"${subdomain}" already exists` });
     }
 
+    // Add domain to Render
+    const renderResult = await addRenderCustomDomain(subdomain, cnameTarget);
+    
+    if (!renderResult.success) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Render API Error: ${renderResult.message}` 
+      });
+    }
+
+    // Save to database
     const mapping = new Mapping({
       subdomain: subdomain.toLowerCase(),
-      targetUrl: targetUrl.trim()
+      targetUrl: `https://${subdomain}.cutehub.top`,
+      cnameTarget: cnameTarget,
+      renderDomainId: renderResult.domainId,
+      status: 'pending'
     });
 
     await mapping.save();
 
-    res.status(201).json({ success: true, message: 'Created successfully', mapping });
+    res.status(201).json({ 
+      success: true, 
+      message: 'Subdomain created! Add this CNAME to your DNS provider:',
+      mapping,
+      dnsRecord: {
+        type: 'CNAME',
+        host: subdomain,
+        target: cnameTarget
+      }
+    });
+
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.post('/verify/:id', async (req, res) => {
+  try {
+    await connectDB();
+    const { id } = req.params;
+    
+    const mapping = await Mapping.findById(id);
+    if (!mapping) {
+      return res.status(404).json({ success: false, message: 'Not found' });
+    }
+
+    if (!mapping.renderDomainId) {
+      return res.status(400).json({ success: false, message: 'No Render domain ID' });
+    }
+
+    const verifyResult = await verifyRenderDomain(mapping.renderDomainId);
+    
+    if (verifyResult.success) {
+      mapping.status = 'verified';
+      await mapping.save();
+    }
+
+    res.json({ 
+      success: verifyResult.success, 
+      status: mapping.status,
+      message: verifyResult.success ? 'Verified successfully' : verifyResult.message
+    });
 
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -156,14 +350,18 @@ app.delete('/delete/:id', async (req, res) => {
     await connectDB();
     const { id } = req.params;
     
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ success: false, message: 'Invalid ID' });
-    }
-
-    const deleted = await Mapping.findByIdAndDelete(id);
-    if (!deleted) {
+    const mapping = await Mapping.findById(id);
+    if (!mapping) {
       return res.status(404).json({ success: false, message: 'Not found' });
     }
+
+    // Delete from Render
+    if (mapping.renderDomainId) {
+      await deleteRenderDomain(mapping.renderDomainId);
+    }
+
+    // Delete from database
+    await Mapping.findByIdAndDelete(id);
 
     res.json({ success: true, message: 'Deleted successfully' });
 
@@ -173,117 +371,15 @@ app.delete('/delete/:id', async (req, res) => {
 });
 
 // ============================================
-// REVERSE PROXY
-// ============================================
-app.use(async (req, res, next) => {
-  // Skip if not a subdomain request
-  if (req.path !== '/' && !req.path.startsWith('/')) {
-    return next();
-  }
-
-  const host = req.headers.host || '';
-  const domain = 'cutehub.top';
-  
-  // Check if it's a subdomain request
-  if (!host.endsWith(`.${domain}`) || host === domain || host === `www.${domain}`) {
-    return next();
-  }
-
-  const subdomain = host.replace(`.${domain}`, '').toLowerCase();
-
-  try {
-    await connectDB();
-    const mapping = await Mapping.findOne({ subdomain });
-    
-    if (!mapping) {
-      return res.status(404).send(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Subdomain Not Found</title>
-          <style>
-            body { background: #0b0d15; color: #eef2f6; font-family: system-ui; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; padding: 20px; }
-            .box { background: rgba(18, 22, 33, 0.8); backdrop-filter: blur(10px); border-radius: 40px; padding: 3rem; max-width: 600px; text-align: center; border: 1px solid rgba(255, 100, 100, 0.2); }
-            h1 { font-size: 3rem; margin: 0; color: #ff7a7a; }
-            .sub { font-size: 1.5rem; color: #7fc9ff; margin: 0.5rem 0; }
-            p { color: #8aa4c0; margin: 1.5rem 0; }
-            a { color: #3c8eff; text-decoration: none; }
-          </style>
-        </head>
-        <body>
-          <div class="box">
-            <h1>🔍 404</h1>
-            <div class="sub">${subdomain}.cutehub.top</div>
-            <p>This subdomain has not been configured yet.</p>
-            <p><a href="/">← Back to Dashboard</a></p>
-          </div>
-        </body>
-        </html>
-      `);
-    }
-
-    const targetUrl = mapping.targetUrl;
-    const cleanTarget = targetUrl.endsWith('/') ? targetUrl.slice(0, -1) : targetUrl;
-
-    const proxy = createProxyMiddleware({
-      target: cleanTarget,
-      changeOrigin: true,
-      secure: true,
-      ws: true,
-      xfwd: true,
-      proxyReqPathResolver: (req) => req.originalUrl || req.url,
-      onProxyReq: (proxyReq, req) => {
-        if (req.headers) {
-          Object.keys(req.headers).forEach(key => {
-            if (key !== 'host' && key !== 'connection') {
-              proxyReq.setHeader(key, req.headers[key]);
-            }
-          });
-        }
-      },
-      onProxyRes: (proxyRes) => {
-        proxyRes.headers['location'] = undefined;
-        proxyRes.headers['Access-Control-Allow-Origin'] = '*';
-      },
-      onError: (err, req, res) => {
-        res.status(500).send(`
-          <!DOCTYPE html>
-          <html>
-          <head><meta charset="UTF-8"><title>Proxy Error</title>
-            <style>body{background:#0b0d15;color:#eef2f6;font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;}
-            .box{background:rgba(18,22,33,0.8);border-radius:40px;padding:3rem;max-width:500px;text-align:center;border:1px solid rgba(255,150,50,0.2);}
-            h1{color:#ffa64d;}</style>
-          </head>
-          <body>
-            <div class="box"><h1>⚠️ Proxy Error</h1><p>Could not reach target server.</p><p><a href="/" style="color:#3c8eff;">← Dashboard</a></p></div>
-          </body>
-          </html>
-        `);
-      }
-    });
-
-    return proxy(req, res, next);
-
-  } catch (error) {
-    res.status(500).send(`
-      <!DOCTYPE html>
-      <html>
-      <head><meta charset="UTF-8"><title>Server Error</title>
-        <style>body{background:#0b0d15;color:#eef2f6;font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;}
-        .box{background:rgba(18,22,33,0.8);border-radius:40px;padding:3rem;max-width:500px;text-align:center;border:1px solid rgba(255,50,50,0.2);}
-        h1{color:#ff5a5a;}</style>
-      </head>
-      <body>
-        <div class="box"><h1>⚠️ 500</h1><p>Internal server error</p><p><a href="/" style="color:#3c8eff;">← Dashboard</a></p></div>
-      </body>
-      </html>
-    `);
-  }
-});
-
-// ============================================
 // EXPORT FOR VERCEL
 // ============================================
 module.exports = app;
+
+// For local development
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`🚀 Subdomain Manager running on port ${PORT}`);
+    console.log(`📡 Dashboard: http://localhost:${PORT}`);
+  });
+}
